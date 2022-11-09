@@ -83,7 +83,14 @@ def get_listing_information(listing_id):
     policy_num = info_list.find("li", class_ = "f19phm7j dir dir-ltr")
     number = policy_num.find("span", class_ = "ll4r2nl dir dir-ltr")
     for num in number:
-        policy_number.append(num.text)
+        if "Pending" in num or "pending" in num:
+            pol_num = "Pending"
+        elif "Exempt" in num or "exempt" in num or "not needed" in num:
+            pol_num = "Exempt"
+        else:
+            pol_num = num.text
+
+        policy_number.append(pol_num)
     
     #place type 
     #class="_cv5qq4"
@@ -175,6 +182,17 @@ def get_detailed_listing_database(html_file):
 
 
 def write_csv(data, filename):
+    with open(filename, 'w') as f:
+        header = "Listing Title,Cost,Listing ID,Policy Number,Place Type,Number of Bedrooms"
+        f.write(header+'\n')
+        data.sort(key = lambda x: x[1])
+        for i in data:
+            line = list(i)
+            line = str(line)[1:-1]
+            line = line.replace(", ", ",").replace("'", "")
+            f.write(line+'\n')
+        return None
+            
     """
     Write a function that takes in a list of tuples (called data, i.e. the
     one that is returned by get_detailed_listing_database()), sorts the tuples in
@@ -200,6 +218,50 @@ def write_csv(data, filename):
 
 
 def check_policy_numbers(data):
+    #20##-00####STR
+    #pattern_1 = "^20\d{2}-00\d{4}STR$"
+    #STR-000####
+    #pattern_2 = "^STR-000\d{4}$"
+
+    #STR-000#### or 20##-00####STR
+    pattern = "^STR-000\d{4}$|^20\d{2}-00\d{4}STR$"
+    lst = []
+    pol_num_lst = []
+    invalid_lst = []
+    for tup in data:
+        policy_number = tup[3]
+        if policy_number != "Pending" and policy_number != "Exempt":
+            lst.append(policy_number)
+        else:
+            continue
+    for s in lst:
+        find_list = re.findall(pattern, s)
+        pol_num_lst += find_list
+    
+    for i in lst:
+        if i in pol_num_lst:
+            continue
+        else:
+            invalid_lst.append(i)
+    
+    listing_title = []
+    cost_per_night = []
+    listing_id = [] 
+    listings = []
+
+    with open("html_files/mission_district_search_results.html") as f:
+        soup = BeautifulSoup(f, 'html.parser')
+    title_list = soup.find_all("div", class_ = "t1jojoys dir dir-ltr")
+    
+    #listing_title and listing_id
+    for title in title_list:
+        listing_title.append(title.text)
+        id = title.get("id")
+        listing_id.append(id.strip("title_"))
+    
+
+    #print(invalid_lst)
+    #return invalid_lst
     """
     Write a function that takes in a list of tuples called data, (i.e. the one that is returned by
     get_detailed_listing_database()), and parses through the policy number of each, validating the
@@ -338,13 +400,17 @@ class TestCases(unittest.TestCase):
                 csv_lines.append(i)
         # check that there are 21 lines in the csv
         self.assertEqual(len(csv_lines), 21)
+
         # check that the header row is correct
+        self.assertEqual(csv_lines[0], ["Listing Title", "Cost", "Listing ID", "Policy Number", "Place Type", "Number of Bedrooms"])
 
         # check that the next row is Private room in Mission District,82,51027324,Pending,Private Room,1
+        self.assertEqual(csv_lines[1], ["Private room in Mission District", "82", "51027324", "Pending", "Private Room", "1"])
 
         # check that the last row is Apartment in Mission District,399,28668414,Pending,Entire Room,2
+        self.assertEqual(csv_lines[20], ["Apartment in Mission District", "399", "28668414", "Pending", "Entire Room", "2"])
 
-        pass
+        pass 
 
     def test_check_policy_numbers(self):
         # call get_detailed_listing_database on "html_files/mission_district_search_results.html"
@@ -354,11 +420,15 @@ class TestCases(unittest.TestCase):
         invalid_listings = check_policy_numbers(detailed_database)
         # check that the return value is a list
         self.assertEqual(type(invalid_listings), list)
+
         # check that there is exactly one element in the string
+        self.assertEqual(len(invalid_listings), 1)
 
         # check that the element in the list is a string
+        for i in invalid_listings:
+            self.assertEqual(type(i), str)
 
-        # check that the first element in the list is '16204265'
+        # check that the first element in the list is '16204265' 
         pass
 
 
