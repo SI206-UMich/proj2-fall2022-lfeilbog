@@ -1,3 +1,8 @@
+# Your name: Leah Feilbogen
+# Your student id: 61226968
+# Your email: lfeilbog@umich.edu
+# List who you have worked with on this project: Lindsey Bellowe 
+
 from xml.sax import parseString
 from bs4 import BeautifulSoup
 import re
@@ -7,6 +12,37 @@ import unittest
 
 
 def get_listings_from_search_results(html_file):
+    #return [('Title of Listing 1', 'Cost 1', 'Listing ID 1'), (), ...]
+    listing_title = []
+    cost_per_night = []
+    listing_id = [] 
+    listings = []
+
+    with open(html_file) as f:
+        soup = BeautifulSoup(f, 'html.parser')
+    cost = soup.find_all("span", class_ = "_tyxjp1")
+    title_list = soup.find_all("div", class_ = "t1jojoys dir dir-ltr")
+    
+    #listing_title and listing_id
+    for title in title_list:
+        listing_title.append(title.text)
+        id = title.get("id")
+        listing_id.append(id.strip("title_"))
+    
+    #cost_per_night 
+    for nightly_price in cost:
+        # print(nightly_price)
+        price = nightly_price.text.strip("$")
+        # print(price)
+        cost_per_night.append(int(price))
+
+    #string of tuples 
+    for i in range(len(cost_per_night)):
+        listings.append((listing_title[i], cost_per_night[i], listing_id[i]))
+    
+    return listings 
+    #print(listings)
+        
     """
     Write a function that creates a BeautifulSoup object on html_file. Parse
     through the object and return a list of tuples containing:
@@ -27,8 +63,63 @@ def get_listings_from_search_results(html_file):
     """
     pass
 
-
 def get_listing_information(listing_id):
+    #return tuple: ("policy number", "place type", number bedrooms)
+
+    policy_number = []
+    place_type = []
+    number_bedrooms = []
+   
+    
+    file_name = "html_files/listing_"+listing_id+".html"
+    with open(file_name) as f:
+        soup = BeautifulSoup(f, 'html.parser')
+
+    #policy number 
+    #<ul class="fhhmddr dir dir-ltr">
+    #<li class="f19phm7j dir dir-ltr" is the first item under ul and is "Policy number: xxx"
+    #<span class="ll4r2nl dir dir-ltr">pending</span> is the number itself 
+    info_list = soup.find("ul", class_ = "fhhmddr dir dir-ltr")
+    policy_num = info_list.find("li", class_ = "f19phm7j dir dir-ltr")
+    number = policy_num.find("span", class_ = "ll4r2nl dir dir-ltr")
+    for num in number:
+        policy_number.append(num.text)
+    
+    #place type 
+    #class="_cv5qq4"
+    type_place = soup.find("div", class_ = "_cv5qq4")
+    for place in type_place:
+        place = place.text
+        if "private" in place:
+            tplace = "Private Room"
+        elif "Private" in place:
+            tplace = "Private Room"
+        elif "shared" in place:
+            tplace = "Shared Room"
+        elif "Shared" in place:
+            tplace = "Shared Room"
+        else:
+            tplace = "Entire Room"
+        place_type.append(tplace)
+    
+    #number bedrooms 
+    #<li class="l7n4lsf dir dir-ltr"> (the second li in the list!)
+    #third span 
+    bed_info = soup.find_all("li", class_ = "l7n4lsf dir dir-ltr")[1]
+    number_bed = bed_info.find_all("span")[2].text
+    
+    if "studio" in number_bed or "Studio" in number_bed:
+        number_bedrooms.append(1)
+    else:
+        num_bed = number_bed.replace(" ", "")
+        bed = int(num_bed[0])
+        number_bedrooms.append(bed)
+    
+    listing_information = (policy_number[0], place_type[0], number_bedrooms[0])
+
+    return listing_information
+    #print(listing_information)
+    
     """
     Write a function to return relevant information in a tuple from an Airbnb listing id.
     NOTE: Use the static files in the html_files folder, do NOT send requests to the actual website.
@@ -54,8 +145,19 @@ def get_listing_information(listing_id):
     """
     pass
 
-
 def get_detailed_listing_database(html_file):
+    detailed_info = []
+    
+    tup1 = get_listings_from_search_results(html_file)
+   
+    for tup in tup1:
+        list_id = tup[2]
+        tup2 = get_listing_information(list_id)
+        tup3 = tup + tup2
+        detailed_info.append(tup3) 
+    
+    return detailed_info
+    
     """
     Write a function that calls the above two functions in order to return
     the complete listing information using the functions you’ve created.
@@ -142,15 +244,25 @@ class TestCases(unittest.TestCase):
         # call get_listings_from_search_results("html_files/mission_district_search_results.html")
         # and save to a local variable
         listings = get_listings_from_search_results("html_files/mission_district_search_results.html")
+       
         # check that the number of listings extracted is correct (20 listings)
         self.assertEqual(len(listings), 20)
+
         # check that the variable you saved after calling the function is a list
         self.assertEqual(type(listings), list)
+
         # check that each item in the list is a tuple
+        for result in listings:
+            self.assertEqual(type(result), tuple)
 
         # check that the first title, cost, and listing id tuple is correct (open the search results html and find it)
-
+        self.assertEqual(listings[0], ('Loft in Mission District', 210, '1944564'))
+            #('Loft in Mission District', 210, '1944564')
+        
         # check that the last title is correct (open the search results html and find it)
+            #('Guest suite in Mission District', 238, '32871760')
+        self.assertEqual(listings[-1][0], 'Guest suite in Mission District')
+        
         pass
 
     def test_get_listing_information(self):
@@ -161,23 +273,33 @@ class TestCases(unittest.TestCase):
                      "6600081"]
         # call get_listing_information for i in html_list:
         listing_informations = [get_listing_information(id) for id in html_list]
+
         # check that the number of listing information is correct (5)
         self.assertEqual(len(listing_informations), 5)
+
         for listing_information in listing_informations:
+
             # check that each item in the list is a tuple
             self.assertEqual(type(listing_information), tuple)
+
             # check that each tuple has 3 elements
             self.assertEqual(len(listing_information), 3)
+
             # check that the first two elements in the tuple are string
             self.assertEqual(type(listing_information[0]), str)
             self.assertEqual(type(listing_information[1]), str)
+
             # check that the third element in the tuple is an int
             self.assertEqual(type(listing_information[2]), int)
+
         # check that the first listing in the html_list has policy number 'STR-0001541'
+        self.assertEqual((listing_informations[0][0]), "STR-0001541")
 
         # check that the last listing in the html_list is a "Private Room"
+        self.assertEqual((listing_informations[-1][1]), "Private Room")
 
         # check that the third listing has one bedroom
+        self.assertEqual((listing_informations[2][2]), 1)
 
         pass
 
@@ -191,13 +313,15 @@ class TestCases(unittest.TestCase):
             # assert each item in the list of listings is a tuple
             self.assertEqual(type(item), tuple)
             # check that each tuple has a length of 6
+            self.assertEqual(len(item), 6)
 
         # check that the first tuple is made up of the following:
         # 'Loft in Mission District', 210, '1944564', '2022-004088STR', 'Entire Room', 1
+        self.assertEqual((detailed_database[0]), ('Loft in Mission District', 210, '1944564', '2022-004088STR', 'Entire Room', 1))
 
         # check that the last tuple is made up of the following:
         # 'Guest suite in Mission District', 238, '32871760', 'STR-0004707', 'Entire Room', 1
-
+        self.assertEqual((detailed_database[-1]), ('Guest suite in Mission District', 238, '32871760', 'STR-0004707', 'Entire Room', 1))
         pass
 
     def test_write_csv(self):
