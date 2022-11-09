@@ -218,50 +218,19 @@ def write_csv(data, filename):
 
 
 def check_policy_numbers(data):
-    #20##-00####STR
-    #pattern_1 = "^20\d{2}-00\d{4}STR$"
-    #STR-000####
-    #pattern_2 = "^STR-000\d{4}$"
-
-    #STR-000#### or 20##-00####STR
     pattern = "^STR-000\d{4}$|^20\d{2}-00\d{4}STR$"
-    lst = []
-    pol_num_lst = []
+
     invalid_lst = []
     for tup in data:
         policy_number = tup[3]
-        if policy_number != "Pending" and policy_number != "Exempt":
-            lst.append(policy_number)
-        else:
+        if re.search(pattern, policy_number):
             continue
-    for s in lst:
-        find_list = re.findall(pattern, s)
-        pol_num_lst += find_list
-    
-    for i in lst:
-        if i in pol_num_lst:
+        elif policy_number == "Pending" or policy_number == "Exempt":
             continue
         else:
-            invalid_lst.append(i)
-    
-    listing_title = []
-    cost_per_night = []
-    listing_id = [] 
-    listings = []
+            invalid_lst.append(tup[2])
+    return invalid_lst
 
-    with open("html_files/mission_district_search_results.html") as f:
-        soup = BeautifulSoup(f, 'html.parser')
-    title_list = soup.find_all("div", class_ = "t1jojoys dir dir-ltr")
-    
-    #listing_title and listing_id
-    for title in title_list:
-        listing_title.append(title.text)
-        id = title.get("id")
-        listing_id.append(id.strip("title_"))
-    
-
-    #print(invalid_lst)
-    #return invalid_lst
     """
     Write a function that takes in a list of tuples called data, (i.e. the one that is returned by
     get_detailed_listing_database()), and parses through the policy number of each, validating the
@@ -429,8 +398,8 @@ class TestCases(unittest.TestCase):
             self.assertEqual(type(i), str)
 
         # check that the first element in the list is '16204265' 
+        self.assertEqual(invalid_listings[0], '16204265')
         pass
-
 
 if __name__ == '__main__':
     database = get_detailed_listing_database("html_files/mission_district_search_results.html")
