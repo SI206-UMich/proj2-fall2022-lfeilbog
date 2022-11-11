@@ -1,7 +1,7 @@
 # Your name: Leah Feilbogen
 # Your student id: 61226968
 # Your email: lfeilbog@umich.edu
-# List who you have worked with on this project: Lindsey Bellowe 
+# List who you have worked with on this project: Lindsey Bellowe, Kiran Krishnan
 
 from xml.sax import parseString
 from bs4 import BeautifulSoup
@@ -422,9 +422,9 @@ class TestCases(unittest.TestCase):
 
     def test_extra_credit(self):
         test1 = extra_credit(16204265)
-        print(test1)
+        self.assertEqual(test1, False)
         test2 = extra_credit(1944564)
-        print(test2)
+        self.assertEqual(test2, True)
 
 
 if __name__ == '__main__':
